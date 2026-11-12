@@ -2,7 +2,7 @@
 
 Split an integer amount (cents, satoshi, seats, shares) proportionally **without losing or inventing a unit**. `penny_alloc` uses exact rational quotas and largest-remainder rounding, and ships an independent `audit()` that can reject any third-party split.
 
-Upstream: none
+Upstream: 原创（本仓自研，无上游）
 
 ## Why this exists
 
