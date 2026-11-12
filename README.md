@@ -85,7 +85,7 @@ Result on 2026-11-12, CPython 3.12.3: **25 tests, OK, 1.59 s**.
 - Edge cases: 0 total, 1 unit across two weights, all-zero weights rejected, fractional and `Decimal` weights, `10**18` totals, negative/bool/float input rejection.
 - Tamper tests: sum drift, a quota violation whose sum is still 100, negative share, wrong length — all rejected.
 - 3 CLI tests cover exit 0/1/2 and the JSON shape.
-- The optimality certificate is checked on all 3,000 random splits above, plus 300 seeded splits where one unit is deliberately moved from a winner to a losing remainder: **>100 tampers constructed and rejected, 0 false acceptances**; quota-valid-but-wrong splits such as `100, [1,1,1] -> [33,34,33]` are rejected by name.
+- The optimality certificate is checked on all 3,000 random splits above, plus 300 seeded splits scanned for a constructible tamper (move one unit from a winner to a strictly smaller remainder): **>100 such tampers constructed and rejected, 0 false acceptances**; quota-valid-but-wrong splits such as `100, [1,1,1] -> [33,34,33]` are rejected by name.
 
 ## Limits
 
