@@ -8,7 +8,7 @@ import unittest
 from decimal import Decimal
 from fractions import Fraction
 
-from penny_alloc import AllocationError, allocate, audit, describe, quotas
+from penny_alloc import AllocationError, allocate, audit, describe, quotas, verify_largest_remainder
 
 
 def exact_quota(total: int, weights: list) -> list[Fraction]:
@@ -71,6 +71,7 @@ class Properties(unittest.TestCase):
                 self.assertGreaterEqual(share, low)
                 self.assertLessEqual(share, high)
             self.assertEqual(audit(total, weights, shares), [])
+            self.assertEqual(verify_largest_remainder(total, weights, shares), [])
             self.assertEqual(shares, allocate(total, weights))
             checked += 1
         self.assertEqual(checked, 3000)
@@ -107,6 +108,62 @@ class Auditing(unittest.TestCase):
     def test_audit_reports_invalid_input(self) -> None:
         self.assertTrue(audit(-1, [1], [0]))
         self.assertTrue(audit(1, [], []))
+
+
+class Optimality(unittest.TestCase):
+    def test_accepts_the_documented_split(self) -> None:
+        self.assertEqual(verify_largest_remainder(100, [1, 1, 1], [34, 33, 33]), [])
+
+    def test_rejects_quota_valid_but_wrong_recipient(self) -> None:
+        # All three quotas are 100/3, so every remainder is tied; the rule says
+        # index 0 gets the unit.  Giving it to index 1 is quota-valid but wrong.
+        violations = verify_largest_remainder(100, [1, 1, 1], [33, 34, 33])
+        self.assertTrue(violations)
+        self.assertIn("largest-remainder", violations[0])
+
+    def test_rejects_bigger_remainder_losing(self) -> None:
+        # weights [1, 2]: remainders are 1/3 and 2/3, so index 1 must win.
+        self.assertEqual(verify_largest_remainder(100, [1, 2], [33, 67]), [])
+        self.assertTrue(verify_largest_remainder(100, [1, 2], [34, 66]))
+
+    def test_bad_input_falls_back_to_audit(self) -> None:
+        self.assertTrue(verify_largest_remainder(100, [1, 1], [100]))
+        self.assertTrue(verify_largest_remainder(100, [1, 1], [-1, 101]))
+
+    def test_zero_leftovers_requires_exact_floors(self) -> None:
+        # 2 * [1,1] -> exact halves, no leftovers allowed.
+        self.assertEqual(verify_largest_remainder(2, [1, 1], [1, 1]), [])
+        self.assertTrue(verify_largest_remainder(2, [1, 1], [2, 0]))
+
+    def test_random_300_documented_splits_certify(self) -> None:
+        rng = random.Random(998877)
+        rejected_tampers = 0
+        for _ in range(300):
+            n = rng.randint(1, 15)
+            total = rng.randint(0, 50_000)
+            weights = [rng.randint(0, 500) for _ in range(n)]
+            if not any(weights):
+                weights[0] = 1
+            shares = allocate(total, weights)
+            self.assertEqual(verify_largest_remainder(total, weights, shares), [])
+
+            qs = exact_quota(total, weights)
+            floors = [q.numerator // q.denominator for q in qs]
+            remainders = [q - f for q, f in zip(qs, floors)]
+            extras = [i for i in range(n) if shares[i] > floors[i]]
+            losers = [i for i in range(n) if shares[i] == floors[i]]
+            if not extras or not losers:
+                continue
+            giver = extras[0]
+            taker = max(losers, key=lambda k: (remainders[k], -k))
+            if remainders[taker] >= remainders[giver]:
+                continue
+            tampered = list(shares)
+            tampered[giver] -= 1
+            tampered[taker] += 1
+            self.assertTrue(verify_largest_remainder(total, weights, tampered))
+            rejected_tampers += 1
+        self.assertGreater(rejected_tampers, 100)
 
 
 class Rejections(unittest.TestCase):

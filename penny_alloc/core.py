@@ -98,6 +98,38 @@ def describe(total: int, weights: Sequence[Number]) -> list[dict]:
     ]
 
 
+def verify_largest_remainder(
+    total: int, weights: Sequence[Number], shares: Sequence[int]
+) -> list[str]:
+    """Check a split against the documented largest-remainder rule.
+
+    First applies :func:`audit` (sum, quota bounds, non-negativity).  Then it
+    verifies that the items receiving a leftover unit are exactly the ones with
+    the largest fractional remainders, ties by original index.  A split that is
+    quota-valid but assigns the extra unit to a smaller remainder is rejected.
+    """
+    violations = audit(total, weights, shares)
+    if violations:
+        return violations
+
+    exact_shares = quotas(total, weights)
+    floors = [q.numerator // q.denominator for q in exact_shares]
+    leftovers = total - sum(floors)
+    ranking = sorted(
+        range(len(exact_shares)),
+        key=lambda i: (-(exact_shares[i] - floors[i]), i),
+    )
+    expected_extra = set(ranking[:leftovers])
+    for i in range(len(exact_shares)):
+        wanted = floors[i] + (1 if i in expected_extra else 0)
+        if shares[i] != wanted:
+            violations.append(
+                f"share[{i}]={shares[i]} does not follow largest-remainder rule "
+                f"(expected {wanted})"
+            )
+    return violations
+
+
 def audit(total: int, weights: Sequence[Number], shares: Sequence[int]) -> list[str]:
     """Return every violated invariant; empty list means the split is valid.
 
