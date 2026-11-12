@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 from fractions import Fraction
-from typing import Sequence
+from typing import Sequence, Union
 
-Number = int | Fraction | Decimal
+# Union[...] (not int | Fraction) keeps the package importable on Python 3.9.
+Number = Union[int, Fraction, Decimal]
 
 
 class AllocationError(ValueError):
