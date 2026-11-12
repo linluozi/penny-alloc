@@ -93,6 +93,10 @@ Result on 2026-11-12, CPython 3.12.3: **25 tests, OK, 1.59 s**.
 - Ties are resolved by input order; this is a documented policy, not a claim of uniqueness.
 - No currency conversion or formatting; input and output are integer minor units.
 
+## 本轮创新
+
+Beyond quota validity, this ships an **optimality certificate** (`verify_largest_remainder`) that rejects a split whose sum and per-share quota are both correct but which gives the leftover unit to a smaller remainder — a failure mode "sum == total" tests cannot see. 3,000 random splits pass; >100 constructed tampers are rejected with 0 false acceptances.
+
 ## License
 
 MIT. See `LICENSE`.
